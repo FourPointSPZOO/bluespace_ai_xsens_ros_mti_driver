@@ -59,18 +59,37 @@
 //  ARBITRATORS APPOINTED IN ACCORDANCE WITH SAID RULES.
 //  
 
-#ifndef PACKETCALLBACK_H
-#define PACKETCALLBACK_H
+#ifndef XDACALLBACK_H
+#define XDACALLBACK_H
 
 #include <rclcpp/rclcpp.hpp>
-#include <xstypes/xsdatapacket.h>
+#include "xscontroller/xscallback.h"
+#include <mutex>
+#include <condition_variable>
+#include <list>
 
-const char* DEFAULT_FRAME_ID = "imu_link";
+struct XsDataPacket;
+struct XsDevice;
 
-class PacketCallback
+typedef std::pair<rclcpp::Time, XsDataPacket> RosXsDataPacket;
+
+class XdaCallback : public XsCallback
 {
-    public:
-        virtual void operator()(const XsDataPacket &, rclcpp::Time) = 0;
+public:
+	XdaCallback(rclcpp::Node& node, size_t maxBufferSize = 5);
+	virtual ~XdaCallback() throw();
+
+	RosXsDataPacket next(const std::chrono::milliseconds &timeout);
+
+protected:
+	void onLiveDataAvailable(XsDevice *, const XsDataPacket *packet) override;
+
+private:
+	std::mutex m_mutex;
+	std::condition_variable m_condition;
+	std::list<RosXsDataPacket> m_buffer;
+	size_t m_maxBufferSize;
+	rclcpp::Node& parent_node;
 };
 
 #endif

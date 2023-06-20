@@ -3,76 +3,150 @@
 cmake_minimum_required(VERSION 3.8)
 project(ros2_xsens_mti_driver)
 
-cmake_policy(SET CMP0057 NEW)
+###############
+## Configure ##
+###############
+
+# Default to C99
+if (NOT CMAKE_C_STANDARD)
+    set(CMAKE_C_STANDARD 99)
+endif ()
 
 # Default to C++14
 if (NOT CMAKE_CXX_STANDARD)
     set(CMAKE_CXX_STANDARD 14)
 endif ()
 
+if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif ()
+
 # Find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
-###########
-## Build ##
-###########
+# Add a directory with headers
+include_directories(include)
+include_directories(SYSTEM /opt/ros/$ENV{ROS_DISTRO}/include) # IntelliJ can't see rclcpp without that
 
-# automatic build of xspublic lib
-add_subdirectory(lib/xspublic)
-
-add_executable(
-        xsens_mti_node
-        src/main.cpp
-        src/xdainterface.cpp
-        src/xdacallback.cpp
-)
-
-target_include_directories(xsens_mti_node PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/xspublic>
-        $<INSTALL_INTERFACE:include>)
-
-ament_target_dependencies(xsens_mti_node
+# Set helper constants
+set(DEPENDENCIES
         rclcpp
+        rclcpp_components
         tf2
         tf2_ros
         std_msgs
         geometry_msgs
-        sensor_msgs
+        sensor_msgs)
+
+set(SOURCES
+        src/xdainterface.cpp
+        src/xdacallback.cpp
         )
 
-target_link_libraries(
-        xsens_mti_node
+file(GLOB MESSAGEPUBLISHERS_INCLUDES
+        include/ros2_xsens_mti_driver/messagepublishers/*.h)
+
+set(INCLUDES
+        include/ros2_xsens_mti_driver/xdainterface.h
+        include/ros2_xsens_mti_driver/xdacallback.h
+        ${MESSAGEPUBLISHERS_INCLUDES}
+        )
+
+set(XSPUBLIC_LIBS
         xscontroller
         xscommon
         xstypes
-        pthread
-        dl
-)
-
-install(TARGETS xsens_mti_node
-        EXPORT export_${PROJECT_NAME}
-        DESTINATION lib/${PROJECT_NAME}
         )
 
-install(DIRECTORY launch param rviz urdf
+
+set(THIRD_PARTY_LIBS
+        pthread
+        dl
+        )
+
+###########
+## Build ##
+###########
+
+set(EXEC_NAME xsens_mti_node)
+set(LIB_NAME xsens_mti_node_component)
+
+### Automatically build the xspublic in a separate CMakeLists.txt
+add_subdirectory(lib/xspublic)
+
+### Create a shared library from the specified files
+add_library(${LIB_NAME} SHARED
+        ${INCLUDES}
+        ${SOURCES}
+        )
+
+target_link_libraries(${LIB_NAME}
+        ${XSPUBLIC_LIBS}
+        ${THIRD_PARTY_LIBS}
+        )
+
+target_include_directories(${LIB_NAME} PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/xspublic>
+        $<INSTALL_INTERFACE:include>)
+
+ament_target_dependencies(${LIB_NAME}
+        ${DEPENDENCIES}
+        )
+
+# Register an rclcpp component with the ament resource index and create an executable.
+rclcpp_components_register_nodes(${LIB_NAME} "XdaInterface")
+
+### Create the regular executable (non-component)
+add_executable(${EXEC_NAME}
+        src/main.cpp
+        ${SOURCES}
+        )
+
+# Link the created shared library
+target_link_libraries(${EXEC_NAME} ${LIB_NAME})
+
+#############
+## Install ##
+#############
+
+# install binaries
+install(TARGETS ${EXEC_NAME} ${LIB_NAME}
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION lib/${PROJECT_NAME}
+        )
+
+# install launchfiles and configuration files
+install(DIRECTORY launch param
         DESTINATION share/${PROJECT_NAME}
         )
 
+# install header files
+install(DIRECTORY include/
+        DESTINATION include/
+        )
+
+##########
+## Test ##
+##########
+
 if (BUILD_TESTING)
     find_package(ament_lint_auto REQUIRED)
-    # the following line skips the linter which checks for copyrights
-    # uncomment the line when a copyright and license is not present in all source files
-    #set(ament_cmake_copyright_FOUND TRUE)
-    # the following line skips cpplint (only works in a git repo)
-    # uncomment the line when this package is not in a git repo
-    #set(ament_cmake_cpplint_FOUND TRUE)
     ament_lint_auto_find_test_dependencies()
 endif ()
 
+#################
+## Ament Cmake ##
+#################
+
+ament_export_include_directories(include)
+ament_export_libraries(${LIB_NAME})
+ament_export_dependencies(${DEPENDENCIES})
 ament_package()

@@ -59,37 +59,56 @@
 //  ARBITRATORS APPOINTED IN ACCORDANCE WITH SAID RULES.
 //  
 
-#ifndef XDACALLBACK_H
-#define XDACALLBACK_H
+#ifndef XDAINTERFACE_H
+#define XDAINTERFACE_H
 
 #include <rclcpp/rclcpp.hpp>
-#include <xscontroller/xscallback.h>
-#include <mutex>
-#include <condition_variable>
-#include <list>
 
-struct XsDataPacket;
+#include "xdacallback.h"
+#include "xstypes/xsportinfo.h"
+
+#include "chrono"
+
+struct XsControl;
 struct XsDevice;
 
-typedef std::pair<rclcpp::Time, XsDataPacket> RosXsDataPacket;
 
-class XdaCallback : public XsCallback
-{
+class PacketCallback;
+
+class XdaInterface : public rclcpp::Node {
 public:
-	XdaCallback(rclcpp::Node& node, size_t maxBufferSize = 5);
-	virtual ~XdaCallback() throw();
+    explicit XdaInterface(const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
 
-	RosXsDataPacket next(const std::chrono::milliseconds &timeout);
+    XdaInterface(
+            const std::string &node_name,
+            const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
 
-protected:
-	void onLiveDataAvailable(XsDevice *, const XsDataPacket *packet) override;
+    ~XdaInterface();
+
+    void spinFor(std::chrono::milliseconds timeout);
+
+    void registerPublishers();
+
+    bool connectDevice();
+
+    bool prepare();
+
+    void close();
+
+    const int XS_DEFAULT_BAUDRATE = 115200;
 
 private:
-	std::mutex m_mutex;
-	std::condition_variable m_condition;
-	std::list<RosXsDataPacket> m_buffer;
-	size_t m_maxBufferSize;
-	rclcpp::Node& parent_node;
+    void registerCallback(PacketCallback *cb);
+
+    bool handleError(std::string error);
+
+    void declareCommonParameters();
+
+    XsControl *m_control;
+    XsDevice *m_device;
+    XsPortInfo m_port;
+    XdaCallback m_xdaCallback;
+    std::list<PacketCallback *> m_callbacks;
 };
 
 #endif

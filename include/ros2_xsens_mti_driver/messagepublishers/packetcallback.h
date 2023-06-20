@@ -59,47 +59,18 @@
 //  ARBITRATORS APPOINTED IN ACCORDANCE WITH SAID RULES.
 //  
 
-#ifndef XDAINTERFACE_H
-#define XDAINTERFACE_H
+#ifndef PACKETCALLBACK_H
+#define PACKETCALLBACK_H
 
 #include <rclcpp/rclcpp.hpp>
+#include "xstypes/xsdatapacket.h"
 
-#include "xdacallback.h"
-#include <xstypes/xsportinfo.h>
+const char* DEFAULT_FRAME_ID = "imu_link";
 
-#include "chrono"
-
-struct XsControl;
-struct XsDevice;
-
-
-class PacketCallback;
-
-class XdaInterface : public rclcpp::Node
+class PacketCallback
 {
-public:
-	explicit XdaInterface(const std::string &node_name, const rclcpp::NodeOptions &options=rclcpp::NodeOptions());
-	~XdaInterface();
-
-	void spinFor(std::chrono::milliseconds timeout);
-	void registerPublishers();
-
-	bool connectDevice();
-	bool prepare();
-	void close();
-
-	const int XS_DEFAULT_BAUDRATE = 115200;
-
-private:
-	void registerCallback(PacketCallback *cb);
-	bool handleError(std::string error);
-	void declareCommonParameters();
-
-	XsControl *m_control;
-	XsDevice *m_device;
-	XsPortInfo m_port;
-	XdaCallback m_xdaCallback;
-	std::list<PacketCallback *> m_callbacks;
+    public:
+        virtual void operator()(const XsDataPacket &, rclcpp::Time) = 0;
 };
 
 #endif

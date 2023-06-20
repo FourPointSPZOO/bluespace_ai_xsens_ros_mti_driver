@@ -60,7 +60,7 @@
 //  
 
 #include <rclcpp/rclcpp.hpp>
-#include "xdainterface.h"
+#include "ros2_xsens_mti_driver/xdainterface.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -71,31 +71,29 @@ using std::chrono::milliseconds;
 Journaller *gJournal = 0;
 
 
-int main(int argc, char *argv[])
-{
-	rclcpp::init(argc, argv);
-	rclcpp::executors::SingleThreadedExecutor exec;
-	rclcpp::NodeOptions nodeOptions;
+int main(int argc, char *argv[]) {
+    rclcpp::init(argc, argv);
+    rclcpp::executors::SingleThreadedExecutor exec;
+    rclcpp::NodeOptions nodeOptions;
 
-	auto xdaInterface = std::make_shared<XdaInterface>("xsens_driver", nodeOptions);
-	exec.add_node(xdaInterface);
-	xdaInterface->registerPublishers();
+    auto xdaInterface = std::make_shared<XdaInterface>("xsens_mti_node", nodeOptions);
+    exec.add_node(xdaInterface);
+    xdaInterface->registerPublishers();
 
-	if (!xdaInterface->connectDevice())
-		return -1;
+    if (!xdaInterface->connectDevice())
+        return -1;
 
-	if (!xdaInterface->prepare())
-		return -1;
+    if (!xdaInterface->prepare())
+        return -1;
 
-	while (rclcpp::ok())
-	{
-		xdaInterface->spinFor(milliseconds(100));
-		exec.spin_some();
-	}
+    while (rclcpp::ok()) {
+        xdaInterface->spinFor(milliseconds(100));
+        exec.spin_some();
+    }
 
-	xdaInterface.reset();
+    xdaInterface.reset();
 
-	rclcpp::shutdown();
+    rclcpp::shutdown();
 
-	return 0;
+    return 0;
 }

@@ -59,7 +59,7 @@
 //  ARBITRATORS APPOINTED IN ACCORDANCE WITH SAID RULES.
 //  
 
-#include "xdacallback.h"
+#include "ros2_xsens_mti_driver/xdacallback.h"
 
 #include <xscontroller/xsdevice_def.h>
 #include <xstypes/xsdatapacket.h>
