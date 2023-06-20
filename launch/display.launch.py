@@ -13,7 +13,7 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     # Set env var to print messages to stdout immediately
-    arg = SetEnvironmentVariable('RCUTILS_CONSOLE_STDOUT_LINE_BUFFERED', '1')
+    arg = SetEnvironmentVariable('RCUTILS_LOGGING_BUFFERED_STREAM', '1')
     ld.add_action(arg)
 
     driver_launch = IncludeLaunchDescription(
