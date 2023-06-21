@@ -106,7 +106,6 @@ rclcpp_components_register_nodes(${LIB_NAME} "XdaInterface")
 ### Create the regular executable (non-component)
 add_executable(${EXEC_NAME}
         src/main.cpp
-        ${SOURCES}
         )
 
 # Link the created shared library
