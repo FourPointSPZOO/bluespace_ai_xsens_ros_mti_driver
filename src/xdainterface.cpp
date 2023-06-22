@@ -92,7 +92,7 @@ XdaInterface::XdaInterface(const std::string &node_name, const rclcpp::NodeOptio
 }
 
 XdaInterface::XdaInterface(const rclcpp::NodeOptions &options) :
-        Node("xsense", "/", options), m_device(nullptr), m_xdaCallback(*this) {
+        Node("xsens", "/", options), m_device(nullptr), m_xdaCallback(*this) {
     /**
      * An explicit constructor with only const rclcpp::NodeOptions &options is required to create a Component.
      */
