@@ -30,6 +30,7 @@ find_package(tf2_ros REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(Threads REQUIRED)
 
 # Add a directory with headers
 include_directories(include)
@@ -65,10 +66,12 @@ set(XSPUBLIC_LIBS
         xstypes
         )
 
-
+# linking dlopen: https://stackoverflow.com/questions/33678965/need-to-link-cmake-project-to-dl-library
+# linking pthreads: https://stackoverflow.com/questions/1620918/cmake-and-libpthread
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 set(THIRD_PARTY_LIBS
-        pthread
-        dl
+        Threads::Threads
+        ${CMAKE_DL_LIBS}
         )
 
 ###########
@@ -99,6 +102,14 @@ target_include_directories(${LIB_NAME} PUBLIC
 ament_target_dependencies(${LIB_NAME}
         ${DEPENDENCIES}
         )
+
+# required gJournal symbol definition if the node is called
+# as a component without main.cpp that contains that definition
+target_compile_definitions(
+        ${LIB_NAME}
+        PRIVATE
+        -DROS2_COMPONENT
+)
 
 # Register an rclcpp component with the ament resource index and create an executable.
 rclcpp_components_register_nodes(${LIB_NAME} "XdaInterface")

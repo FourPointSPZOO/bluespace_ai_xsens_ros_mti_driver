@@ -75,6 +75,10 @@ struct XsDevice;
 
 class PacketCallback;
 
+#ifdef ROS2_COMPONENT
+Journaller *gJournal = 0;
+#endif
+
 class XdaInterface : public rclcpp::Node {
 public:
     explicit XdaInterface(const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
