@@ -1,4 +1,9 @@
-# Copyright 2023 Haul Vision
+find_package(PkgConfig)
+pkg_check_modules(
+        MY_LIBUSB
+        IMPORTED_TARGET
+        libusb-1.0
+)
 
 # This file replaces Makefiles provided by the original authors to build three libraries:
 # xscommon, xscontroller, and xstypes.
@@ -26,7 +31,13 @@ target_compile_options(
         xscommon
         PRIVATE
         "SHELL:-include xstypes/xsens_compat.h"
-        "SHELL:-include xscommon_config.h"
+        "SHELL:-include xscommon/xscommon_config.h"
+)
+
+target_compile_definitions(
+        xscommon
+        PRIVATE
+        -DXSENS_DEBUG
 )
 
 # It sets the C++ standard to 14 and enables position-independent code.
@@ -64,8 +75,23 @@ add_library(
 target_compile_options(
         xscontroller
         PRIVATE
-        "SHELL:-include xscontrollerconfig.h"
+        "SHELL:-include xscontroller/xscontrollerconfig.h"
 )
+
+target_compile_definitions(
+        xscontroller
+        PRIVATE
+        -DHAVE_JOURNALLER
+        -DXSENS_DEBUG
+)
+
+if (${MY_LIBUSB_FOUND})
+    target_compile_definitions(
+            xscontroller
+            PRIVATE
+            -DHAVE_LIBUSB
+    )
+endif ()
 
 set_target_properties(
         xscontroller
@@ -107,4 +133,10 @@ target_include_directories(
         xstypes
         PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_compile_definitions(
+        xstypes
+        PRIVATE
+        -DXSENS_DEBUG
 )
