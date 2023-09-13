@@ -31,6 +31,9 @@ find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(Threads REQUIRED)
+find_package(mavros_msgs REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
+find_package(nmea_msgs REQUIRED)
 
 # Add a directory with headers
 include_directories(include)
@@ -44,27 +47,34 @@ set(DEPENDENCIES
         tf2_ros
         std_msgs
         geometry_msgs
-        sensor_msgs)
+        sensor_msgs
+        mavros_msgs
+        diagnostic_msgs
+        nmea_msgs
+)
 
 set(SOURCES
         src/xdainterface.cpp
         src/xdacallback.cpp
-        )
+        src/ntrip_util.cpp
+)
 
 file(GLOB MESSAGEPUBLISHERS_INCLUDES
-        include/ros2_xsens_mti_driver/messagepublishers/*.h)
+        include/ros2_xsens_mti_driver/messagepublishers/*.h
+)
 
 set(INCLUDES
         include/ros2_xsens_mti_driver/xdainterface.h
         include/ros2_xsens_mti_driver/xdacallback.h
+        include/ros2_xsens_mti_driver/ntrip_util.h
         ${MESSAGEPUBLISHERS_INCLUDES}
-        )
+)
 
 set(XSPUBLIC_LIBS
         xscontroller
         xscommon
         xstypes
-        )
+)
 
 # linking dlopen: https://stackoverflow.com/questions/33678965/need-to-link-cmake-project-to-dl-library
 # linking pthreads: https://stackoverflow.com/questions/1620918/cmake-and-libpthread
@@ -72,7 +82,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 set(THIRD_PARTY_LIBS
         Threads::Threads
         ${CMAKE_DL_LIBS}
-        )
+)
 
 ###########
 ## Build ##
@@ -88,20 +98,21 @@ add_subdirectory(lib/xspublic)
 add_library(${LIB_NAME} SHARED
         ${INCLUDES}
         ${SOURCES}
-        )
+)
 
 target_link_libraries(${LIB_NAME}
         ${XSPUBLIC_LIBS}
         ${THIRD_PARTY_LIBS}
-        )
+)
 
 target_include_directories(${LIB_NAME} PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/xspublic>
-        $<INSTALL_INTERFACE:include>)
+        $<INSTALL_INTERFACE:include>
+)
 
 ament_target_dependencies(${LIB_NAME}
         ${DEPENDENCIES}
-        )
+)
 
 # required gJournal symbol definition if the node is called
 # as a component without main.cpp that contains that definition
@@ -117,7 +128,7 @@ rclcpp_components_register_nodes(${LIB_NAME} "XdaInterface")
 ### Create the regular executable (non-component)
 add_executable(${EXEC_NAME}
         src/main.cpp
-        )
+)
 
 # Link the created shared library
 target_link_libraries(${EXEC_NAME} ${LIB_NAME})
@@ -131,17 +142,17 @@ install(TARGETS ${EXEC_NAME} ${LIB_NAME}
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION lib/${PROJECT_NAME}
-        )
+)
 
 # install launchfiles and configuration files
 install(DIRECTORY launch param
         DESTINATION share/${PROJECT_NAME}
-        )
+)
 
 # install header files
 install(DIRECTORY include/
         DESTINATION include/
-        )
+)
 
 ##########
 ## Test ##

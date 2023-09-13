@@ -62,10 +62,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include "ros2_xsens_mti_driver/xdainterface.h"
 
-#include <iostream>
-#include <stdexcept>
-#include <string>
-
 using std::chrono::milliseconds;
 
 Journaller *gJournal = 0;
