@@ -321,7 +321,7 @@ void XdaInterface::registerCallback(PacketCallback *cb) {
 }
 
 void XdaInterface::rtcmCallback(const mavros_msgs::msg::RTCM::SharedPtr msg) {
-    RCLCPP_INFO(this->get_logger(), "RTCM received at [%d]", msg->header.stamp.sec);
+    RCLCPP_DEBUG(this->get_logger(), "RTCM received at [%d]", msg->header.stamp.sec);
     XsMessage rtcm(XMID_ForwardGnssData);
     uint16_t rtcmMessageLength = (const uint16_t) msg->data.size();
     rtcm.setDataBuffer((const uint8_t *) &msg->data[0], rtcmMessageLength, 0);

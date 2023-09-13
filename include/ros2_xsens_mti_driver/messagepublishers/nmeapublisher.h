@@ -37,29 +37,36 @@
 #include "ros2_xsens_mti_driver/messagepublishers/packetcallback.h"
 
 #include <nmea_msgs/msg/sentence.hpp>
+#include <rclcpp/timer.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <string>
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+
+using namespace std::chrono_literals;
 
 struct NMEAPublisher : public PacketCallback {
     rclcpp::Publisher<nmea_msgs::msg::Sentence>::SharedPtr pub;
     rclcpp::TimerBase::SharedPtr timer;
     rclcpp::Time m_timeStamp;
     std::string frame_id = DEFAULT_FRAME_ID;
+    rclcpp::Node &node_handle;
 
     XsDataPacket latest_packet; // to store the latest packet
     bool new_data_available = false;
 
-    NMEAPublisher(rclcpp::Node &node) {
+    NMEAPublisher(rclcpp::Node &node)
+            : node_handle(node) {
+
         int pub_queue_size = 5;
-        node.get_parameter("~publisher_queue_size", pub_queue_size);
+        node_handle.get_parameter("~publisher_queue_size", pub_queue_size);
         pub = node.create_publisher<nmea_msgs::msg::Sentence>("nmea", pub_queue_size);
-        node.get_parameter("~frame_id", frame_id);
+        node_handle.get_parameter("~frame_id", frame_id);
 
         // Set up a timer to trigger every 1 second
-        timer = node.create_wall_timer(std::chrono::milliseconds(1000),
-                                       std::bind(&NMEAPublisher::timerCallback, this));
+        // TODO(mbed): does not work when ComposableNode is used (requires more debugging)
+        timer = node_handle.create_wall_timer(1000ms, std::bind(&NMEAPublisher::timerCallback, this));
     }
 
     void operator()(const XsDataPacket &packet, rclcpp::Time timestamp) {
@@ -79,10 +86,8 @@ struct NMEAPublisher : public PacketCallback {
         nmea_msgs::msg::Sentence nmea_msg;
         nmea_msg.header.stamp = m_timeStamp;
         nmea_msg.header.frame_id = frame_id;
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "processAndPublish");
 
         if (packet.containsRawGnssPvtData()) {
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "packet.containsRawGnssPvtData");
 
             XsRawGnssPvtData gnssPvtData = packet.rawGnssPvtData();
             std::string gga_buffer;
@@ -93,8 +98,6 @@ struct NMEAPublisher : public PacketCallback {
 
             return; // If this block is executed, immediately return to avoid executing the next block
         } else if (packet.containsUtcTime() && packet.containsLatitudeLongitude() && packet.containsStatus()) {
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "packet.containsUtcTime() && packet.containsLatitudeLongitude() && packet.containsStatus()");
-
             XsRawGnssPvtData gnssData;
 
             XsTimeInfo utcTime = packet.utcTime();
