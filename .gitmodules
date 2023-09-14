@@ -1,0 +1,3 @@
+[submodule "submodules/ntrip_client"]
+	path = submodules/ntrip_client
+	url = https://github.com/FourPointSPZOO/ntrip_client.git
