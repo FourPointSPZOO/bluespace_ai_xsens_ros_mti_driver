@@ -48,37 +48,24 @@ using namespace std::chrono_literals;
 
 struct NMEAPublisher : public PacketCallback {
     rclcpp::Publisher<nmea_msgs::msg::Sentence>::SharedPtr pub;
-    rclcpp::TimerBase::SharedPtr timer;
     rclcpp::Time m_timeStamp;
     std::string frame_id = DEFAULT_FRAME_ID;
     rclcpp::Node &node_handle;
 
-    XsDataPacket latest_packet; // to store the latest packet
-    bool new_data_available = false;
-
     NMEAPublisher(rclcpp::Node &node)
-            : node_handle(node) {
+            : m_timeStamp(0, 0, RCL_ROS_TIME), node_handle(node) {
 
         int pub_queue_size = 5;
         node_handle.get_parameter("~publisher_queue_size", pub_queue_size);
-        pub = node.create_publisher<nmea_msgs::msg::Sentence>("nmea", pub_queue_size);
+        pub = node_handle.create_publisher<nmea_msgs::msg::Sentence>("nmea", pub_queue_size);
         node_handle.get_parameter("~frame_id", frame_id);
-
-        // Set up a timer to trigger every 1 second
-        // TODO(mbed): does not work when ComposableNode is used (requires more debugging)
-        timer = node_handle.create_wall_timer(1000ms, std::bind(&NMEAPublisher::timerCallback, this));
     }
 
     void operator()(const XsDataPacket &packet, rclcpp::Time timestamp) {
-        latest_packet = packet; // Update the latest packet
-        m_timeStamp = timestamp;
-        new_data_available = true;
-    }
-
-    void timerCallback() {
-        if (new_data_available) {
-            processAndPublish(latest_packet);
-            new_data_available = false;
+        // Only publish once per second
+        if (timestamp - m_timeStamp > 1s) {
+            processAndPublish(packet);
+            m_timeStamp = timestamp;
         }
     }
 
