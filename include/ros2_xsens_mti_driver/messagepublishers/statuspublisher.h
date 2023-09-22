@@ -61,27 +61,54 @@
 #include <diagnostic_msgs/msg/key_value.hpp>
 #include <bitset>
 
-struct StatusPublisher : public PacketCallback
-{
+using namespace std::chrono_literals;
+
+struct RTKStatus {
+    const std::pair<uint, uint> FIX = {1, 0};
+    const std::pair<uint, uint> FLOATING = {0, 1};
+    const std::pair<uint, uint> NONE = {0, 0};
+};
+
+struct StatusPublisher : public PacketCallback {
     rclcpp::Publisher<diagnostic_msgs::msg::KeyValue>::SharedPtr pub;
     std::string frame_id = DEFAULT_FRAME_ID;
+    rclcpp::Node &node_handle;
+    RTKStatus rtk_status;
+    rclcpp::Time last_print_time;
+    bool verbose;
 
-    StatusPublisher(rclcpp::Node &node)
-    {
+    StatusPublisher(rclcpp::Node &node) :
+            node_handle(node),
+            last_print_time(0, 0, RCL_ROS_TIME) {
         int pub_queue_size = 5;
-        node.get_parameter("publisher_queue_size", pub_queue_size);
-        pub = node.create_publisher<diagnostic_msgs::msg::KeyValue>("status", pub_queue_size);
-        node.get_parameter("frame_id", frame_id);
+
+        node_handle.get_parameter("publisher_queue_size", pub_queue_size);
+        pub = node_handle.create_publisher<diagnostic_msgs::msg::KeyValue>("status", pub_queue_size);
+        node_handle.get_parameter("frame_id", frame_id);
+        node_handle.get_parameter("verbose", verbose);
     }
 
-    void operator()(const XsDataPacket &packet, rclcpp::Time timestamp)
-    {
-        if (packet.containsStatus())
-        {
+    void operator()(const XsDataPacket &packet, rclcpp::Time timestamp) {
+        if (packet.containsStatus()) {
             diagnostic_msgs::msg::KeyValue msg;
 
+            auto raw_bits = std::bitset<32>(packet.status());
+
             msg.key = "StatusWord";
-            msg.value = std::bitset<32>(packet.status()).to_string();
+            msg.value = raw_bits.to_string();
+
+            // Only print RTK status once per second if verbose
+            if (verbose && timestamp - last_print_time > 1s) {
+                last_print_time = timestamp;
+                std::pair<uint, uint> current_status = {raw_bits[raw_bits.size() - 4], raw_bits[raw_bits.size() - 5]};
+                if (rtk_status.NONE == current_status) {
+                    RCLCPP_INFO(node_handle.get_logger(), "RTK float or fix not available");
+                } else if (rtk_status.FLOATING == current_status) {
+                    RCLCPP_INFO(node_handle.get_logger(), "RTK float. Converging to RTK fix.");
+                } else if (rtk_status.FIX == current_status) {
+                    RCLCPP_INFO(node_handle.get_logger(), "RTK fix available. ");
+                }
+            }
             pub->publish(msg);
         }
     }

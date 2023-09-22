@@ -64,7 +64,6 @@
 #include <xscontroller/xsscanner.h>
 #include <xscontroller/xscontrol_def.h>
 #include <xscontroller/xsdevice_def.h>
-#include <mavros_msgs/msg/rtcm.h>
 
 #include "ros2_xsens_mti_driver/messagepublishers/packetcallback.h"
 #include "ros2_xsens_mti_driver/messagepublishers/accelerationpublisher.h"
@@ -113,9 +112,7 @@ XdaInterface::XdaInterface(const rclcpp::NodeOptions &options) :
     if (!prepare())
         return;
 
-    while (rclcpp::ok()) {
-        spinFor(std::chrono::milliseconds(100));
-    }
+    RCLCPP_INFO(get_logger(), "Xsens driver ready.");
 }
 
 XdaInterface::~XdaInterface() {
@@ -368,6 +365,7 @@ void XdaInterface::declareCommonParameters() {
     declare_parameter("port", "");
     declare_parameter("baudrate", XsBaud::rateToNumeric(XBR_Invalid));
 
+    declare_parameter("verbose", false);
     declare_parameter("enable_logging", false);
     declare_parameter("log_file", "log.mtb");
 }
